@@ -62,3 +62,8 @@ typings/
 
 *.7z
 data/
+*.json
+*.csv
+*.xls
+*.xlsx
+*.~lock*
