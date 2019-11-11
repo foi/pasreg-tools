@@ -1,0 +1,14 @@
+{
+  "name": "pasreg-tools",
+  "version": "1.0.0",
+  "description": "Утилиты для работы с pasreg.rosminzdrav.ru",
+  "scripts": {
+    "dump": "node dump.js",
+    "export": "node export.js"
+  },
+  "author": "foi",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.6.0"
+  }
+}
