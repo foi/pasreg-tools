@@ -71,12 +71,17 @@
     Object.keys(housesDataGrouped).forEach(mo => {
       const housesCount = housesDataGrouped[mo].length
       let stringTemplate = `${mo}\t${housesCount}\n`
+      let count = housesDataGrouped[mo].length
       housesDataGrouped[mo].forEach(e => {
+        count = count - 1
         let hasInternet = 0
         if (e.json && e.json.building && e.json.building.has_internet){
           hasInternet = 1
         }
         stringTemplate = stringTemplate + `${e.frmo}\t${hasInternet}\n`
+        if (count === 0) {
+          stringTemplate = stringTemplate + `Итого:\t${housesDataGrouped[mo].map(e => e.json.building.has_internet).filter(e => e).length}\n`
+        }
       })
       resultArray.push(stringTemplate)
     })
