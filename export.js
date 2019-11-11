@@ -99,8 +99,9 @@
     Object.keys(frmoDataGrouped).forEach(mo => {
       const departmentsCount = frmoDataGrouped[mo].length
       let stringTemplate = `${mo}\t${departmentsCount}\n`
+      let count = frmoDataGrouped[mo].length
       frmoDataGrouped[mo].forEach(e => {
-        console.log('e', e);
+        count = count - 1
         let computers_count = 0
         let computers_mis_count = 0
         let has_mis_recipes = false
@@ -120,6 +121,9 @@
           }
         }
         stringTemplate = stringTemplate + `${e.frmo}\t${computers_count}\t${computers_mis_count}\t${has_mis_recipes}\t${has_telemed}\n`
+        if (count === 0) {
+          stringTemplate = stringTemplate + `Итого:\t${frmoDataGrouped[mo].map(e => e.json.computers_count).reduce((a,b) => a + b)}\t${frmoDataGrouped[mo].map(e => e.json.computers_mis_count).reduce((a,b) => a + b)}\t${frmoDataGrouped[mo].map(e => e.json.has_mis_recipes).filter(e => e).length}\t${frmoDataGrouped[mo].map(e => e.json.has_telemed).filter(e => e).length}\n`
+        }
       })
       resultArray.push(stringTemplate)
     })
