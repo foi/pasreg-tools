@@ -32,7 +32,6 @@
       await mkdir(ROOT_PATH, { recursive: true })
     }
 
-
     const truncateString = (str, num) => {
       if (str.length <= num) {
         return str
@@ -44,40 +43,65 @@
       const cleanedName = e.replace(/'/g, "").replace(/"/g, "").replace(/«/g, "").replace(/»/g, "").split(' ').join('_')
       return cleanedName.length > MAX_FILE_NAME_LENGTH ? truncateString(cleanedName, MAX_FILE_NAME_LENGTH) : cleanedName
     }
-    //
-    //const orgsResponse = await fetch(`https://pasreg.rosminzdrav.ru/api/orgs?subject_code=${subject}&per_page=100`, opts)
-    const orgsResponse = await fetch(`https://pasreg.rosminzdrav.ru/api/orgs/mini_index?data={"subject_code":"${subject}","per_page":"100","type_id":null,"id":null,"search_text":null,"federal_name":null,"state_id":null,"page":null}`, opts)
-    const orgsJson = await orgsResponse.json()
-    console.log(orgsJson);
-    const orgs = orgsJson.data
+
+    const range = (start, end) => {
+      if(start === end) return [start]
+      return [start, ...range(start + 1, end)]
+    }
+
+    const getDataFromAllPages = async (url) => {
+      const initialResponseRaw = await fetch(url, opts)
+      const initialResponseJson = await initialResponseRaw.json()
+      const pagesCount = parseInt(initialResponseJson["last_page"])
+      const getP = range(1, pagesCount).map(async (i) => {
+        const _raw = await fetch(`${url}&page=${i}`, opts)
+        return await _raw.json()
+      })
+      const unformatted = await Promise.all(getP)
+      const results = []
+      const dataUnformatted = unformatted.map(e => e.data)
+      dataUnformatted.forEach(d => {
+        d.forEach(dd => {
+          results.push(dd)
+        })
+      })
+      return results
+    }
+
+
+    const orgs = await getDataFromAllPages(`https://pasreg.rosminzdrav.ru/api/orgs/mini_index?data={"subject_code":"${subject}","per_page":"10","type_id":null,"id":null,"search_text":null,"federal_name":null,"state_id":null,"page":null`)
+
     console.log(`Регион: ${subject}, организаций: ${orgs.length}`)
-    const orgsIdAndName = orgs.forEach(async (org) => {
-       const folderName = `${org.id}@${formatShortName(org.nameshort)}`
-       await mkdir(`${ROOT_PATH}/${folderName}`, { recursive: true })
-       await mkdir(`${ROOT_PATH}/${folderName}/houses`, { recursive: true })
-       await mkdir(`${ROOT_PATH}/${folderName}/frmo`, { recursive: true })
-       console.log(`Дампаем данные об организации ${ROOT_PATH}/${folderName}/data.json`)
-       await writeFile(`${ROOT_PATH}/${folderName}/data.json`, JSON.stringify(org))
-       const orgInfoResponse = await (await fetch(`https://pasreg.rosminzdrav.ru/api/orgs/${org.id}`, opts)).json()
-       if (orgInfoResponse.houses.length > 0) {
-         orgInfoResponse.houses.forEach(async (h) => {
-           const housePath = `${ROOT_PATH}/${folderName}/houses/${h.id}@${formatShortName(h.name)}`
-           await mkdir(housePath, { recursive: true })
-           console.log(`Дампаем данные о здании ${housePath}/data.json`)
-           await writeFile(`${housePath}/data.json`, JSON.stringify(h))
-         })
-       }
-       const orgDepartmentsResponse = await (await fetch(`https://pasreg.rosminzdrav.ru/api/org_departments?org_id=${org.id}&per_page=250`, opts)).json()
-       if (orgDepartmentsResponse.data) {
-         orgDepartmentsResponse.data.forEach(async (department) => {
-           const departmentName = department.frmo_department && department.frmo_department.depart_name ? formatShortName(department.frmo_department.depart_name) : ''
-           const departmentPath = `${ROOT_PATH}/${folderName}/frmo/${department.id}@${departmentName}`
-           await mkdir(departmentPath, { recursive: true })
-           console.log(`Дампаем данные об подразделении ${departmentPath}/data.json`)
-           await writeFile(`${departmentPath}/data.json`, JSON.stringify(department))
-         })
-       }
-     })
+
+    orgs.forEach(async (org) => {
+      const orgShortName = formatShortName(org.nameshort)
+      const oid = org.oid
+      const orgId = org.id
+      const orgFolderName = `${oid}@${orgId}@${orgShortName}`
+      await mkdir(`${ROOT_PATH}/${orgFolderName}`, { recursive: true })
+      await mkdir(`${ROOT_PATH}/${orgFolderName}/houses`, { recursive: true })
+      await mkdir(`${ROOT_PATH}/${orgFolderName}/frmo`, { recursive: true })
+      console.log(`Дампаем данные об организации ${ROOT_PATH}/${orgFolderName}/data.json`)
+      await writeFile(`${ROOT_PATH}/${orgFolderName}/data.json`, JSON.stringify(org))
+      const departments = await getDataFromAllPages(`https://pasreg.rosminzdrav.ru/api/org_departments?org_id=${orgId}`)
+      departments.forEach(async (department) => {
+        const departmentName = department.frmo_department && department.frmo_department.depart_name ? formatShortName(department.frmo_department.depart_name) : ''
+        const departmentPath = `${ROOT_PATH}/${orgFolderName}/frmo/${department.id}@${departmentName}`
+        await mkdir(departmentPath, { recursive: true })
+        console.log(`Дампаем данные об подразделении ${departmentPath}/data.json`)
+        await writeFile(`${departmentPath}/data.json`, JSON.stringify(department))
+      })
+      const buildingsRaw = await fetch(`https://pasreg.rosminzdrav.ru/api/org_buildings?oid=${oid}`, opts)
+      const buildings = await buildingsRaw.json()
+      buildings.forEach(async (building) => {
+        const buildingRaw = await fetch(`https://pasreg.rosminzdrav.ru/api/buildings/${building.id}`, opts)
+        const buildingJson = await buildingRaw.json()
+        const buildingPath = `${ROOT_PATH}/${orgFolderName}/houses/${building.id}@${formatShortName(building.name)}`
+        await mkdir(buildingPath, { recursive: true })
+        console.log(`Дампаем данные о здании ${buildingPath}/data.json`)
+        await writeFile(`${buildingPath}/data.json`, JSON.stringify(buildingJson))
+      })
+    })
   } catch (e) {
     console.error(e)
   }
