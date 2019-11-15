@@ -18,7 +18,7 @@
         cookie: cookie,
         Authorization: auth
       },
-      timeout: 60 * 1000
+      timeout: 90 * 1000
     }
 
     const ROOT_PATH = `data/${subject}`
@@ -83,14 +83,14 @@
       await mkdir(`${ROOT_PATH}/${orgFolderName}/houses`, { recursive: true })
       await mkdir(`${ROOT_PATH}/${orgFolderName}/frmo`, { recursive: true })
       console.log(`Дампаем данные об организации ${ROOT_PATH}/${orgFolderName}/data.json`)
-      await writeFile(`${ROOT_PATH}/${orgFolderName}/data.json`, JSON.stringify(org))
+      await writeFile(`${ROOT_PATH}/${orgFolderName}/data.json`, JSON.stringify(org, null, 2))
       const departments = await getDataFromAllPages(`https://pasreg.rosminzdrav.ru/api/org_departments?org_id=${orgId}`)
       departments.forEach(async (department) => {
         const departmentName = department.frmo_department && department.frmo_department.depart_name ? formatShortName(department.frmo_department.depart_name) : ''
         const departmentPath = `${ROOT_PATH}/${orgFolderName}/frmo/${department.id}@${departmentName}`
         await mkdir(departmentPath, { recursive: true })
         console.log(`Дампаем данные об подразделении ${departmentPath}/data.json`)
-        await writeFile(`${departmentPath}/data.json`, JSON.stringify(department))
+        await writeFile(`${departmentPath}/data.json`, JSON.stringify(department, null, 2))
       })
       const buildingsRaw = await fetch(`https://pasreg.rosminzdrav.ru/api/org_buildings?oid=${oid}`, opts)
       const buildings = await buildingsRaw.json()
@@ -100,7 +100,7 @@
         const buildingPath = `${ROOT_PATH}/${orgFolderName}/houses/${building.id}@${formatShortName(building.name)}`
         await mkdir(buildingPath, { recursive: true })
         console.log(`Дампаем данные о здании ${buildingPath}/data.json`)
-        await writeFile(`${buildingPath}/data.json`, JSON.stringify(buildingJson))
+        await writeFile(`${buildingPath}/data.json`, JSON.stringify(buildingJson, null, 2))
       })
     })
   } catch (e) {
