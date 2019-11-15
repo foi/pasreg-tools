@@ -17,7 +17,8 @@
       headers: {
         cookie: cookie,
         Authorization: auth
-      }
+      },
+      timeout: 60 * 1000
     }
 
     const ROOT_PATH = `data/${subject}`
